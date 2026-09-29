@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Interactive image processing laboratory: inspect RGB pixels, normalize values, compare grayscale, and explore brightness, contrast and gamma with live histograms.">
+  <title>Pixel Lab — Intensity transformations</title>
+  <style>
+:root {
+  --bg:#090e16; --panel:#111a26; --panel-2:#152130; --surface:#172331; --ink:#f0f5f8; --muted:#a1b1c3; --subtle:#75899d; --line:#283848; --line-strong:#3b5265;
+  --mint:#8be4d5; --mint-strong:#40cbb8; --purple:#b8a5ff; --orange:#f9ba91; --red:#fa838e; --blue:#8caaff; --green:#8be4aa;
+  --shadow:0 28px 64px rgba(0,0,0,.22); --chart-grid:rgba(159,181,199,.14);
+  color-scheme:dark;
+}
+html[data-theme="light"] {
+  --bg:#f4f7f8; --panel:#fff; --panel-2:#f5fafb; --surface:#ecf2f4; --ink:#17222e; --muted:#4c6170; --subtle:#607988; --line:#d9e4e7; --line-strong:#bacdd3;
+  --mint:#067e70; --mint-strong:#0c9d89; --purple:#6653c1; --orange:#bd6d35; --red:#bb4656; --blue:#4369b2; --green:#218c58;
+  --shadow:0 20px 55px rgba(27,67,82,.09); --chart-grid:rgba(54,91,109,.13);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:absolute;z-index:-1;top:0;left:0;right:0;height:900px;background:radial-gradient(ellipse 60% 40% at 78% 2%,rgba(45,169,165,.12),transparent 70%),radial-gradient(ellipse 40% 30% at 13% 10%,rgba(106,100,208,.09),transparent 85%);pointer-events:none}
+button,input{font:inherit}
+button{cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,[role="button"]:focus-visible{outline:2px solid var(--mint-strong);outline-offset:3px}
+a{color:inherit}
+[hidden]{display:none!important}
+.shell{max-width:1440px;margin:auto;padding:0 clamp(16px,3.2vw,54px)}
+.topbar{height:84px;display:flex;align-items:center;gap:26px;border-bottom:1px solid var(--line)}
+.brand{text-decoration:none;display:flex;align-items:center;gap:11px;font-size:18px;font-weight:850;letter-spacing:.1em;white-space:nowrap}
+.brand-accent,.footer-brand>span{color:var(--mint)}
+.brand-mark{width:30px;height:30px;display:grid;grid-template-columns:repeat(2,1fr);gap:4px;transform:rotate(-8deg)}
+.brand-mark i{background:var(--mint);border-radius:2px}
+.brand-mark i:nth-child(2){opacity:.53}.brand-mark i:nth-child(3){opacity:.3}.brand-mark i:nth-child(4){opacity:.74}
+.course-tag,.section-kicker,.eyebrow,.math-label,.analysis-label,.trace-index,.operation-num,.hist-metric>span,.mode-group>span,.info-facts span{font-size:10px;letter-spacing:.17em;font-weight:800}
+.course-tag{color:var(--subtle);margin-left:6px}
+.header-actions{display:flex;align-items:center;gap:9px;margin-left:auto}
+.header-btn,.lang-switch,.lang-btn{border:1px solid var(--line);background:var(--panel);color:var(--muted)}
+.header-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:36px;border-radius:9px;padding:0 13px;font-size:12px;font-weight:700}
+.header-btn:hover,.lang-btn:hover{border-color:var(--mint);color:var(--ink)}
+.header-btn.icon-only{width:36px;padding:0}.theme-icon{width:17px;height:17px}
+.info-symbol{display:grid;place-items:center;width:16px;height:16px;border:1.5px solid currentColor;border-radius:50%;font-size:11px;font-family:Georgia,serif;font-style:italic}
+.lang-switch{display:flex;gap:2px;padding:3px;border-radius:9px}
+.lang-btn{border:none;background:transparent;border-radius:6px;padding:5px 7px;font-size:11px;font-weight:800;color:var(--subtle)}
+.lang-btn.active{background:var(--surface);color:var(--ink)}
+.hero{display:grid;grid-template-columns:1.15fr .85fr;min-height:380px;gap:28px;align-items:center;padding:51px 0 36px}
+.hero-copy{position:relative;z-index:1}.eyebrow{display:flex;align-items:center;gap:12px;color:var(--mint);white-space:nowrap}.eyebrow-rule{width:28px;height:1px;background:var(--line-strong)}
+.live-dot,.status-dot,.flow-dot{display:inline-block;flex:none;width:7px;height:7px;background:var(--mint-strong);border-radius:50%;box-shadow:0 0 0 4px rgba(64,203,184,.11)}
+.hero h1{font-size:clamp(44px,5.2vw,78px);line-height:1.03;letter-spacing:-.067em;max-width:850px;margin:23px 0 19px;font-weight:800}
+.hero h1 em{font-style:normal;color:var(--mint)}
+.hero-copy>p{color:var(--muted);font-size:clamp(14px,1.25vw,17px);max-width:61ch;margin:0;line-height:1.72}
+.hero-pipeline{display:flex;align-items:center;gap:12px;margin-top:30px;flex-wrap:wrap;font-size:11px;letter-spacing:.12em;font-weight:750}
+.hero-pipeline span{padding:8px 11px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.hero-pipeline b{color:var(--mint);font-size:17px;font-weight:400}
+.hero-art{height:325px;max-width:510px;width:100%;justify-self:end;position:relative;overflow:hidden;border:1px solid var(--line);border-radius:22px;background:radial-gradient(circle at 30% 20%,rgba(85,111,147,.16),transparent 40%),linear-gradient(145deg,#142332,#0b1522 70%);box-shadow:var(--shadow)}
+.hero-grid{position:absolute;inset:0;opacity:.48;background-image:linear-gradient(90deg,rgba(162,195,205,.11) 1px,transparent 1px),linear-gradient(rgba(162,195,205,.11) 1px,transparent 1px);background-size:28px 28px;mask-image:linear-gradient(120deg,transparent 12%,#000 80%)}
+.orb{position:absolute;border-radius:50%;filter:blur(1px)}
+.orb-a{width:205px;height:205px;top:45px;left:24%;background:radial-gradient(circle at 32% 28%,#f9d5b3,#e48e86 27%,#674f90 65%,#354170 76%,transparent 77%);box-shadow:30px 30px 70px rgba(176,105,137,.27)}
+.orb-b{width:145px;height:145px;right:10%;bottom:-25px;background:radial-gradient(circle at 35% 32%,#c9faf0,#57c7c5 42%,#344c8e 77%,transparent 78%);box-shadow:0 0 70px rgba(59,170,165,.3)}
+.hero-micro{position:absolute;top:25px;left:27px;color:var(--mint);font-family:ui-monospace,monospace;font-size:12px;line-height:1.9;letter-spacing:.11em}
+.hero-micro span{color:#e5eff0;margin-left:13px}.hero-reticle{position:absolute;top:120px;left:44%;width:44px;height:44px;border:1px solid rgba(255,255,255,.78);border-radius:50%}
+.hero-reticle::before,.hero-reticle::after{content:"";position:absolute;background:rgba(255,255,255,.8)}.hero-reticle::before{width:1px;height:64px;left:21px;top:-11px}.hero-reticle::after{height:1px;width:64px;top:21px;left:-11px}
+.hero-caption{position:absolute;right:18px;top:20px;color:#adcad0;font-size:11px;font-family:ui-monospace,monospace;letter-spacing:.07em}
+.upload-card{margin:7px 0 40px;border:1px solid var(--line);background:var(--panel);border-radius:17px;box-shadow:var(--shadow);overflow:hidden}
+.drop-zone{display:flex;align-items:center;gap:19px;padding:20px 24px;border:1px dashed transparent;transition:.2s}
+.drop-zone.dragging,.drop-zone:hover{background:rgba(73,190,175,.065);border-color:var(--mint-strong)}
+.upload-icon{display:grid;place-items:center;width:46px;height:46px;flex:none;background:rgba(107,205,189,.11);color:var(--mint);border-radius:12px}.upload-icon svg{width:25px;height:25px}
+.upload-copy{display:flex;flex-direction:column;gap:4px;min-width:0}.upload-copy strong{font-size:14px}.upload-copy span{font-size:12px;color:var(--muted)}
+.button{display:inline-flex;justify-content:center;align-items:center;gap:8px;border-radius:9px;padding:11px 15px;font-size:12px;font-weight:800;white-space:nowrap;transition:transform .16s,border-color .16s,background .16s}
+.button:hover{transform:translateY(-1px)}
+.button-primary{background:var(--mint-strong);border:1px solid var(--mint-strong);color:#081919}.button-primary:hover{background:var(--mint)}
+.button-secondary{background:var(--panel);border:1px solid var(--line-strong);color:var(--ink)}.button-secondary:hover{border-color:var(--mint)}
+.drop-zone>.button{margin-left:auto}
+.upload-footer{border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 24px;background:var(--panel-2)}
+.file-state{display:flex;gap:11px;align-items:center;color:var(--muted);font-size:12px;min-width:0}.file-state>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status-dot{width:6px;height:6px;box-shadow:none}
+.text-button{border:0;background:none;color:var(--mint);font-size:12px;font-weight:750;padding:5px;white-space:nowrap}.text-button:hover{text-decoration:underline}
+.section{padding:42px 0 28px;scroll-margin-top:18px}
+.section-heading{display:flex;justify-content:space-between;align-items:end;gap:30px;margin-bottom:23px}
+.section-kicker{margin:0 0 10px;color:var(--mint);font-size:10px}
+.section-heading h2{margin:0;letter-spacing:-.046em;font-size:clamp(27px,3.4vw,43px);line-height:1.12}
+.section-intro{max-width:47ch;color:var(--muted);margin:0;font-size:13px;line-height:1.65}
+.conversion-grid,.result-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.conversion-card,.result-card,.pixel-inspector,.hist-card,.lab-panel,.theory-grid article{border:1px solid var(--line);background:var(--panel);border-radius:16px;box-shadow:var(--shadow)}
+.conversion-card,.result-card{overflow:hidden}
+.card-head{height:52px;padding:0 16px;display:flex;align-items:center;gap:10px}.card-head strong{font-size:12px}.card-index,.hist-index{display:inline-grid;place-items:center;min-width:25px;height:25px;padding:0 4px;background:var(--surface);border-radius:6px;color:var(--mint);font:750 10px ui-monospace,monospace}
+.chip{margin-left:auto;font:700 10px ui-monospace,monospace;letter-spacing:.05em;color:var(--subtle)}
+.image-surface{background-color:#dce8e9;background-image:linear-gradient(45deg,#c6d3d6 25%,transparent 25%),linear-gradient(-45deg,#c6d3d6 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#c6d3d6 75%),linear-gradient(-45deg,transparent 75%,#c6d3d6 75%);background-position:0 0,0 10px,10px -10px,-10px 0;background-size:20px 20px;display:grid;place-items:center;overflow:hidden}
+.image-surface canvas{display:block;max-width:100%;width:auto;height:auto;object-fit:contain}
+.image-surface.compact{height:218px;margin:0 13px 12px;border-radius:9px}.image-surface.compact canvas{max-height:218px}
+.image-surface.large{height:clamp(230px,28vw,370px);margin:0 12px 12px;border-radius:10px}.image-surface.large canvas{max-height:100%;cursor:crosshair;touch-action:manipulation}
+.card-note{min-height:50px;border-top:1px solid var(--line);margin:0;padding:13px 16px;color:var(--muted);font-size:12px}.card-note code{color:var(--mint);white-space:normal}
+.math-strip{display:flex;align-items:center;gap:18px;padding:16px 20px;border:1px solid var(--line);background:var(--panel-2);border-radius:11px;margin-top:15px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.math-strip code{font-size:15px;font-weight:700;color:var(--mint)}.math-label{color:var(--subtle)}
+.lab-panel{overflow:hidden}.lab-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border-bottom:1px solid var(--line);flex-wrap:wrap;background:var(--panel-2)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}.tab{border:0;background:transparent;color:var(--muted);border-radius:7px;padding:10px 13px;font-size:12px;font-weight:750;white-space:nowrap}.tab:hover{color:var(--ink);background:var(--surface)}.tab.active{background:var(--surface);color:var(--mint);box-shadow:inset 0 0 0 1px var(--line-strong)}
+.mode-group{display:flex;align-items:center;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:4px}.mode-group>span{padding:0 10px;color:var(--subtle)}
+.mode-btn{padding:7px 10px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:11px;font-weight:800}.mode-btn.active{color:#081919;background:var(--mint)}
+.controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
+.controls.focused{grid-template-columns:minmax(0,1fr)}
+.control-card{padding:24px;min-width:0;display:flex;flex-direction:column}
+.control-card+ .control-card{border-left:1px solid var(--line)}
+.controls.focused .control-card{max-width:760px;min-height:280px}
+.control-top{display:flex;justify-content:space-between;align-items:center}.operation-num{color:var(--mint)}
+.control-icon{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--line);border-radius:7px;font-size:17px}
+.brightness-icon{color:var(--orange)}.contrast-icon{color:var(--purple)}.gamma-icon{color:var(--mint)}
+.control-card h3{margin:12px 0 7px;font-size:20px;letter-spacing:-.03em}.control-card p{margin:0 0 18px;color:var(--muted);font-size:12px;line-height:1.6;min-height:57px}
+.formula{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);padding:9px 11px;margin-top:auto;margin-bottom:22px}
+.formula span{color:var(--subtle);font-size:9px;font-weight:800;letter-spacing:.1em}.formula code{color:var(--mint);font-size:13px;white-space:nowrap}
+.range-label,.range-end,.range-controls{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.range-label{margin-bottom:11px;font-size:12px;font-weight:750}.range-label output{font:750 16px ui-monospace,monospace;color:var(--mint);min-width:55px;text-align:right}
+.range-controls input{flex:1;min-width:0;accent-color:var(--mint-strong);height:24px;cursor:pointer}
+.step-btn{width:27px;height:27px;flex:none;border:1px solid var(--line-strong);border-radius:7px;background:var(--surface);color:var(--ink);font-size:17px;line-height:1}.step-btn:hover{border-color:var(--mint);color:var(--mint)}
+.range-end{margin:5px 36px 0;color:var(--subtle);font:10px ui-monospace,monospace}
+.control-footer{border-top:1px solid var(--line);padding:13px 20px;display:flex;justify-content:space-between;align-items:center;gap:15px;color:var(--muted);font-size:11px;flex-wrap:wrap}
+.control-footer>span{display:flex;align-items:center;gap:9px}.flow-dot{width:6px;height:6px;box-shadow:none}
+.result-topline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.result-badges,.result-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.result-pill{font:800 10px ui-monospace,monospace;letter-spacing:.05em;border:1px solid var(--mint-strong);color:var(--mint);border-radius:7px;padding:8px 11px}.result-pill.subtle{border-color:var(--line);color:var(--muted)}
+.pixel-inspector{margin-top:15px;overflow:hidden}
+.inspector-heading{padding:20px 22px;display:flex;justify-content:space-between;gap:15px;align-items:center;border-bottom:1px solid var(--line)}
+.inspector-heading h3{margin:0;font-size:17px;letter-spacing:-.02em}.inspector-coord{text-align:right;display:grid;gap:4px;color:var(--muted);font-size:12px}.inspector-coord strong{color:var(--mint);font:700 13px ui-monospace,monospace}
+.trace-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.trace-step{padding:21px;min-width:0;position:relative}.trace-step+ .trace-step{border-left:1px solid var(--line)}
+.trace-step:not(:last-child)::after{content:"→";position:absolute;right:-8px;top:52%;z-index:1;color:var(--mint);background:var(--panel);font-size:16px}
+.trace-index{display:block;color:var(--subtle);margin-bottom:14px}.trace-step strong{display:block;overflow-wrap:anywhere;font:700 clamp(11px,1vw,13px) ui-monospace,monospace;color:var(--ink);line-height:1.6}
+.trace-step small{display:block;color:var(--subtle);font-size:11px;margin-top:8px}.trace-step small code{color:var(--mint)}
+.final-step{background:linear-gradient(135deg,rgba(88,204,187,.08),transparent)}
+.trace-detail{border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:13px 21px;color:var(--muted);font-size:11px}
+.trace-detail #clipTrace{color:var(--orange)}
+.hist-context{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:19px 22px;border:1px solid var(--line);background:var(--panel-2);border-radius:13px;margin-bottom:14px}
+.analysis-label{color:var(--mint)}.hist-context h3{margin:5px 0 3px;font-size:18px}.hist-context p{margin:0;color:var(--muted);font-size:12px}
+.hist-metric{border-left:1px solid var(--line);padding-left:25px;min-width:145px}.hist-metric>span{display:block;color:var(--subtle);font-size:9px;max-width:150px}.hist-metric strong{display:block;color:var(--orange);font:750 23px ui-monospace,monospace;margin-top:4px}
+.hist-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.hist-card{padding:17px 18px;overflow:hidden}.hist-card-head{display:flex;align-items:center;gap:9px;margin-bottom:12px}.hist-card-head h3{font-size:12px;margin:0}.legend{display:flex;gap:3px;margin-left:auto}
+.legend i{width:6px;height:6px;border-radius:50%}.rgb-legend i:first-child{background:#ef667b}.rgb-legend i:nth-child(2){background:#55c897}.rgb-legend i:nth-child(3){background:#6d96ee}.gray-legend i{background:var(--purple)}
+.chart-wrap{height:184px;position:relative}.hist-canvas{width:100%;height:100%;display:block;cursor:crosshair}
+.chart-tooltip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:6px;padding:5px 7px;font:11px ui-monospace,monospace;white-space:nowrap;z-index:2;top:3px;left:0}
+.axis-label{display:flex;justify-content:space-between;color:var(--subtle);font:10px ui-monospace,monospace;margin-top:4px}
+.hist-stat{border-top:1px solid var(--line);padding-top:10px;margin:13px 0 0;color:var(--muted);font-size:11px}
+.hist-footnote{font-size:11px;color:var(--subtle);line-height:1.6;margin:15px 3px}
+.theory{padding-bottom:90px}.theory-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.theory-grid article{padding:22px;box-shadow:none}
+.theory-grid article>span{color:var(--mint);font:700 11px ui-monospace,monospace}.theory-grid h3{margin:12px 0 7px;font-size:15px}.theory-grid p{margin:0;color:var(--muted);font-size:12px;line-height:1.65}
+footer{border-top:1px solid var(--line);display:flex;align-items:center;gap:24px;padding:25px 0 45px;color:var(--subtle);font-size:11px}
+.footer-brand{font-weight:850;letter-spacing:.12em;color:var(--ink);white-space:nowrap}.footer-brand small{font-size:10px;color:var(--subtle);font-weight:500}
+footer p{margin:0 auto}footer a{font-weight:800;color:var(--mint);text-decoration:none;white-space:nowrap}footer a:hover{text-decoration:underline}
+dialog{border:1px solid var(--line-strong);background:var(--panel);color:var(--ink);border-radius:18px;box-shadow:0 30px 120px rgba(0,0,0,.5)}
+dialog::backdrop{background:rgba(1,7,12,.77);backdrop-filter:blur(9px)}
+.info-dialog{width:min(94vw,560px);padding:28px}.dialog-head,.compare-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.close-btn{border:1px solid var(--line);color:var(--ink);background:var(--surface);width:33px;height:33px;border-radius:8px;font-size:22px;line-height:1;flex:none}
+.close-btn:hover{border-color:var(--mint)}.info-dialog h2{font-size:27px;letter-spacing:-.04em;margin:15px 0}.info-dialog p{color:var(--muted);font-size:13px;line-height:1.7}
+.info-facts{display:grid;gap:10px;margin:22px 0}.info-facts>div{padding:13px;background:var(--panel-2);border:1px solid var(--line);border-radius:9px}.info-facts span{display:block;color:var(--subtle);margin-bottom:5px}.info-facts strong{font:700 12px ui-monospace,monospace}
+.info-dialog .privacy-note{border-top:1px solid var(--line);padding-top:16px;margin-bottom:0}
+.compare-dialog{width:100vw;max-width:100vw;height:100vh;max-height:100vh;margin:0;padding:clamp(16px,2vw,30px);border-radius:0}
+.compare-head h2{margin:0 0 20px;font-size:25px}.compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;height:calc(100% - 125px)}
+.compare-grid>div{min-height:0;display:flex;flex-direction:column;gap:7px;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.1em}
+.compare-grid .image-surface{border-radius:11px;height:100%;min-height:0}.compare-grid canvas{max-height:100%}
+.compare-dialog>p{color:var(--muted);font-size:11px;margin:11px 0 0}
+.toast{position:fixed;z-index:120;bottom:24px;left:50%;transform:translate(-50%,18px);background:var(--ink);color:var(--bg);border-radius:9px;padding:9px 14px;font-size:12px;font-weight:750;opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:1100px){.course-tag{display:none}.controls{grid-template-columns:1fr}.control-card+ .control-card{border-left:0;border-top:1px solid var(--line)}.control-card{min-height:255px}.control-card p{min-height:0}.formula{margin-top:5px}.hero-art{height:290px}}
+@media(max-width:780px){.hero{grid-template-columns:1fr;padding-top:36px}.hero-art{display:none}.section-heading{display:block}.section-intro{margin-top:10px}.conversion-grid,.result-grid,.hist-grid{grid-template-columns:1fr}.trace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.trace-step:nth-child(3){border-left:0;border-top:1px solid var(--line)}.trace-step:nth-child(4){border-top:1px solid var(--line)}.trace-step:nth-child(2)::after{display:none}.theory-grid{grid-template-columns:repeat(2,minmax(0,1fr))}footer{flex-wrap:wrap}.drop-zone{flex-wrap:wrap}.drop-zone>.button{margin-left:0}.compare-grid{grid-template-columns:1fr;height:calc(100% - 125px)}.compare-grid>div{height:50%;}.compare-dialog{overflow:auto}}
+@media(max-width:520px){.shell{padding:0 15px}.topbar{height:68px;gap:10px}.brand{font-size:14px}.brand-mark{width:23px;height:23px;gap:3px}.header-actions{gap:5px}.header-btn{padding:0 8px}.header-btn #info-label{display:none}.hero h1{font-size:43px}.eyebrow{font-size:9px;white-space:normal}.hero-pipeline{gap:6px}.hero-pipeline span{font-size:9px;padding:7px}.drop-zone{padding:16px}.upload-copy{width:calc(100% - 65px)}.upload-footer{padding:9px 14px}.upload-footer .text-button{font-size:10px}.lab-toolbar{align-items:stretch}.tabs{width:100%;display:grid;grid-template-columns:repeat(2,1fr)}.tab{font-size:11px;padding:8px 5px}.mode-group{width:100%;justify-content:space-between}.result-actions{width:100%}.result-actions .button{flex:1;font-size:10px;padding:10px 7px}.inspector-heading{display:block}.inspector-coord{text-align:left;margin-top:12px}.trace-step{padding:15px}.trace-step strong{font-size:11px}.hist-context{align-items:start;flex-direction:column}.hist-metric{border-left:0;border-top:1px solid var(--line);padding:10px 0 0}.theory-grid{grid-template-columns:1fr}.image-surface.compact{height:190px}.image-surface.compact canvas{max-height:190px}.section{padding-top:35px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Pixel Lab home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span>PIXEL<span class="brand-accent">/</span>LAB</span>
+      </a>
+      <span class="course-tag" data-i18n="courseTag">IMAGE PROCESSING · INTERACTIVE LAB</span>
+      <div class="header-actions">
+        <button class="header-btn" id="infoBtn" type="button" aria-label="About this project" data-i18n-aria="aboutTitle"><span class="info-symbol">i</span> <span data-i18n="aboutBtn">About</span></button>
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button class="lang-btn active" data-lang="en" type="button" aria-pressed="true">EN</button>
+          <button class="lang-btn" data-lang="pt" type="button" aria-pressed="false">PT</button>
+        </div>
+        <button class="header-btn icon-only" id="themeBtn" type="button" aria-label="Switch to light mode" title="Switch theme">
+          <svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="live-dot"></span><span data-i18n="heroEyebrow">AN INTERACTIVE IMAGE PROCESSING STUDIO</span><span class="eyebrow-rule"></span><span>01 / 04</span></div>
+          <h1 data-i18n="heroTitle">See the math in<br><em>every pixel.</em></h1>
+          <p data-i18n="heroLead">From RGB values to normalized light, then brightness, contrast and gamma. Change every parameter, inspect one pixel, and watch the image and its histograms respond.</p>
+          <div class="hero-pipeline" aria-label="Processing pipeline">
+            <span>0–255</span><b>→</b><span>0–1</span><b>→</b><span data-i18n="pipelineEffects">OPERATIONS</span><b>→</b><span>0–255</span>
+          </div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="orb orb-a"></div><div class="orb orb-b"></div>
+          <div class="hero-grid"></div>
+          <div class="hero-micro">R <span>218</span><br>G <span>121</span><br>B <span>094</span></div>
+          <div class="hero-reticle"></div>
+          <div class="hero-caption">f(x,y) → g(x,y)</div>
+        </div>
+      </section>
+
+      <section id="upload" class="upload-card" aria-label="Image upload">
+        <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-label="Upload JPG or PNG image" data-i18n-aria="uploadAria">
+          <div class="upload-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m-5 5 5-5 5 5M4 17v3h16v-3"></path></svg>
+          </div>
+          <div class="upload-copy">
+            <strong data-i18n="dropTitle">Drop an image here or choose a file</strong>
+            <span data-i18n="dropSub">JPG / PNG · processed privately in your browser · original pixel resolution</span>
+          </div>
+          <button class="button button-primary" id="chooseBtn" type="button" data-i18n="choose">Choose image</button>
+          <input id="fileInput" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden>
+        </div>
+        <div class="upload-footer"><div class="file-state"><span class="status-dot"></span><span id="fileMeta" data-i18n="sampleLoaded">Sample image loaded · 960 × 600 px</span></div><button id="sampleBtn" class="text-button" type="button" data-i18n="restoreSample">Restore sample image ↗</button></div>
+      </section>
+
+      <section class="section conversion" aria-labelledby="conversionTitle">
+        <div class="section-heading">
+          <div><p class="section-kicker">01 / <span data-i18n="startLabel">START HERE</span></p><h2 id="conversionTitle" data-i18n="conversionTitle">One image, two representations.</h2></div>
+          <p class="section-intro" data-i18n="conversionIntro">RGB retains three colour channels. Grayscale calculates one luminance value from normalized R, G and B.</p>
+        </div>
+        <div class="conversion-grid">
+          <article class="conversion-card"><div class="card-head"><span class="card-index">A</span><strong data-i18n="rgbOriginal">Original RGB</strong><span class="chip">R · G · B</span></div><div class="image-surface compact"><canvas id="sourcePreview" aria-label="Original RGB image" data-i18n-aria="sourceAria"></canvas></div><p class="card-note" data-i18n="rgbExplainer">Three channels, each stored as an integer from 0 to 255.</p></article>
+          <article class="conversion-card"><div class="card-head"><span class="card-index">B</span><strong data-i18n="grayPreview">Grayscale conversion</strong><span class="chip">Y</span></div><div class="image-surface compact"><canvas id="grayPreview" aria-label="Grayscale preview" data-i18n-aria="grayAria"></canvas></div><p class="card-note"><span data-i18n="grayExplainer">After normalization, luminance is calculated as</span> <code>Y = 0.2126R + 0.7152G + 0.0722B</code>.</p></article>
+        </div>
+        <div class="math-strip"><span class="math-label" data-i18n="normalizeLabel">NORMALIZE FIRST</span><code>f = I / 255</code><span data-i18n="normalizeInfo">Every operation below uses values in [0, 1]. Values return to 0–255 only for display/export.</span></div>
+      </section>
+
+      <section class="section workbench" id="workbench" aria-labelledby="workbenchTitle">
+        <div class="section-heading">
+          <div><p class="section-kicker">02 / <span data-i18n="workbenchKicker">THE WORKBENCH</span></p><h2 id="workbenchTitle" data-i18n="workbenchTitle">Shape the light.</h2></div>
+          <p class="section-intro" data-i18n="workbenchIntro">Select a step to study it, or show all controls. The final image always applies the three operations in order.</p>
+        </div>
+        <div class="lab-panel">
+          <div class="lab-toolbar">
+            <div class="tabs" role="tablist" aria-label="Operation view" data-i18n-aria="operationTabs">
+              <button type="button" class="tab active" role="tab" data-stage="all" aria-selected="true" data-i18n="tabAll">All operations</button>
+              <button type="button" class="tab" role="tab" data-stage="brightness" aria-selected="false" data-i18n="tabBrightness">01 Brightness</button>
+              <button type="button" class="tab" role="tab" data-stage="contrast" aria-selected="false" data-i18n="tabContrast">02 Contrast</button>
+              <button type="button" class="tab" role="tab" data-stage="gamma" aria-selected="false" data-i18n="tabGamma">03 Gamma</button>
+            </div>
+            <div class="mode-group" role="group" aria-label="Processing mode" data-i18n-aria="modeAria"><span data-i18n="modeLabel">MODE</span><button type="button" class="mode-btn active" data-mode="rgb" aria-pressed="true">RGB</button><button type="button" class="mode-btn" data-mode="gray" aria-pressed="false" data-i18n="grayMode">Grayscale</button></div>
+          </div>
+          <div class="controls" id="controls">
+            <article class="control-card" data-control="brightness">
+              <div class="control-top"><span class="operation-num">01 / β</span><span class="control-icon brightness-icon" aria-hidden="true">✳</span></div>
+              <h3 data-i18n="brightnessTitle">Brightness</h3>
+              <p data-i18n="brightnessDesc">Adds the same amount to every normalized channel. Negative β darkens; positive β brightens.</p>
+              <div class="formula"><span data-i18n="operationFormula">OPERATION</span><code>g = f + β</code></div>
+              <div class="range-label"><label for="brightnessRange" data-i18n="betaLabel">Brightness β</label><output id="brightnessValue" for="brightnessRange">+0.00</output></div>
+              <div class="range-controls"><button class="step-btn" data-param="brightness" data-dir="-1" type="button" aria-label="Decrease brightness" data-i18n-aria="decBrightness">−</button><input id="brightnessRange" type="range" min="-0.5" max="0.5" step="0.01" value="0" aria-label="Brightness beta" data-i18n-aria="betaLabel"><button class="step-btn" data-param="brightness" data-dir="1" type="button" aria-label="Increase brightness" data-i18n-aria="incBrightness">+</button></div>
+              <div class="range-end"><span>−0.50</span><span>0</span><span>+0.50</span></div>
+            </article>
+            <article class="control-card" data-control="contrast">
+              <div class="control-top"><span class="operation-num">02 / α</span><span class="control-icon contrast-icon" aria-hidden="true">◐</span></div>
+              <h3 data-i18n="contrastTitle">Contrast</h3>
+              <p data-i18n="contrastDesc">Stretches or compresses intensities around the midpoint 0.5. α = 1 leaves them unchanged.</p>
+              <div class="formula"><span data-i18n="operationFormula">OPERATION</span><code>g = α(f − 0.5) + 0.5</code></div>
+              <div class="range-label"><label for="contrastRange" data-i18n="alphaLabel">Contrast α</label><output id="contrastValue" for="contrastRange">1.00</output></div>
+              <div class="range-controls"><button class="step-btn" data-param="contrast" data-dir="-1" type="button" aria-label="Decrease contrast" data-i18n-aria="decContrast">−</button><input id="contrastRange" type="range" min="0" max="3" step="0.01" value="1" aria-label="Contrast alpha" data-i18n-aria="alphaLabel"><button class="step-btn" data-param="contrast" data-dir="1" type="button" aria-label="Increase contrast" data-i18n-aria="incContrast">+</button></div>
+              <div class="range-end"><span>0</span><span>1</span><span>3</span></div>
+            </article>
+            <article class="control-card" data-control="gamma">
+              <div class="control-top"><span class="operation-num">03 / γ</span><span class="control-icon gamma-icon" aria-hidden="true">◌</span></div>
+              <h3 data-i18n="gammaTitle">Gamma</h3>
+              <p data-i18n="gammaDesc">Curves midtones nonlinearly. γ &lt; 1 makes them lighter; γ &gt; 1 makes them darker.</p>
+              <div class="formula"><span data-i18n="operationFormula">OPERATION</span><code>g = f<sup>γ</sup></code></div>
+              <div class="range-label"><label for="gammaRange" data-i18n="gammaLabel">Gamma γ</label><output id="gammaValue" for="gammaRange">1.00</output></div>
+              <div class="range-controls"><button class="step-btn" data-param="gamma" data-dir="-1" type="button" aria-label="Decrease gamma" data-i18n-aria="decGamma">−</button><input id="gammaRange" type="range" min="0.2" max="3" step="0.01" value="1" aria-label="Gamma gamma" data-i18n-aria="gammaLabel"><button class="step-btn" data-param="gamma" data-dir="1" type="button" aria-label="Increase gamma" data-i18n-aria="incGamma">+</button></div>
+              <div class="range-end"><span>0.20</span><span>1</span><span>3</span></div>
+            </article>
+          </div>
+          <div class="control-footer"><span><span class="flow-dot"></span><span data-i18n="flowOrder">RGB / grayscale → brightness → contrast → gamma → clipping → round(255 × g)</span></span><button class="text-button" type="button" id="resetBtn" data-i18n="resetAll">Reset all values ↺</button></div>
+        </div>
+      </section>
+
+      <section class="section results" id="results" aria-labelledby="resultsTitle">
+        <div class="section-heading">
+          <div><p class="section-kicker">03 / <span data-i18n="resultKicker">FINAL OUTPUT</span></p><h2 id="resultsTitle" data-i18n="resultsTitle">The complete transformation.</h2></div>
+          <p class="section-intro" data-i18n="resultsIntro">This output combines all active settings, even when you are studying a single operation tab. Hover or click either image to trace a pixel.</p>
+        </div>
+        <div class="result-topline"><div class="result-badges"><span class="result-pill" id="modeBadge">RGB</span><span class="result-pill subtle" id="paramSummary">β +0.00 · α 1.00 · γ 1.00</span></div><div class="result-actions"><button type="button" class="button button-secondary" id="compareBtn" data-i18n="compare">⛶ Compare full screen</button><button type="button" class="button button-primary" id="downloadBtn" data-i18n="download">↓ Download final PNG</button></div></div>
+        <div class="result-grid">
+          <article class="result-card"><div class="card-head"><span class="card-index">01</span><strong data-i18n="originalTitle">Original · RGB 0–255</strong><span class="chip" id="originalDimensions">960 × 600</span></div><div class="image-surface large"><canvas id="originalCanvas" aria-label="Original image, hover or click to inspect pixels" data-i18n-aria="originalAria"></canvas></div></article>
+          <article class="result-card"><div class="card-head"><span class="card-index">02</span><strong data-i18n="processedTitle">Processed · final 0–255</strong><span class="chip" id="processedDimensions">960 × 600</span></div><div class="image-surface large"><canvas id="processedCanvas" aria-label="Processed image, hover or click to inspect pixels" data-i18n-aria="processedAria"></canvas></div></article>
+        </div>
+        <div class="pixel-inspector" id="pixelInspector">
+          <div class="inspector-heading"><div><span class="section-kicker" data-i18n="inspectorKicker">PIXEL TRACE</span><h3 data-i18n="inspectorTitle">From source value to final value</h3></div><div class="inspector-coord"><span id="pinStatus" data-i18n="hoverPrompt">Hover or click an image</span><strong id="pixelCoord">x: — · y: —</strong></div></div>
+          <div class="trace-grid">
+            <div class="trace-step"><span class="trace-index">01 / <span data-i18n="traceOriginal">ORIGINAL</span></span><strong id="traceOriginal">R — · G — · B —</strong><small data-i18n="traceOriginalNote">stored values [0, 255]</small></div>
+            <div class="trace-step"><span class="trace-index">02 / <span data-i18n="traceNormalized">NORMALIZED</span></span><strong id="traceNormalized">R — · G — · B —</strong><small><code>f = I / 255</code></small></div>
+            <div class="trace-step"><span class="trace-index">03 / <span data-i18n="traceProcessed">PROCESSED</span></span><strong id="traceProcessed">R — · G — · B —</strong><small id="traceMode" data-i18n="traceProcessedNote">after β → α → γ and clipping</small></div>
+            <div class="trace-step final-step"><span class="trace-index">04 / <span data-i18n="traceFinal">FINAL</span></span><strong id="traceFinal">R — · G — · B —</strong><small><code>I = round(255 × g)</code></small></div>
+          </div>
+          <div class="trace-detail"><span id="grayTrace" data-i18n="grayTraceDefault">In grayscale mode, the normalized RGB values become Y before processing.</span><span id="clipTrace"></span></div>
+        </div>
+      </section>
+
+      <section class="section histograms" id="histograms" aria-labelledby="histTitle">
+        <div class="section-heading">
+          <div><p class="section-kicker">04 / <span data-i18n="histKicker">DISTRIBUTION ANALYSIS</span></p><h2 id="histTitle" data-i18n="histTitle">Read the histogram.</h2></div>
+          <p class="section-intro" data-i18n="histIntro">The selected tab compares its input and output. “All operations” compares the source image with the combined final image.</p>
+        </div>
+        <div class="hist-context"><div><span class="analysis-label" data-i18n="analysisView">ANALYSIS VIEW</span><h3 id="histScopeTitle">Original → combined result</h3><p id="histScopeNote">The final distribution includes brightness, contrast and gamma in sequence.</p></div><div class="hist-metric"><span data-i18n="clipMetric">CLIPPED COMPONENTS IN THIS STEP</span><strong id="clipMetricValue">0.0%</strong></div></div>
+        <div class="hist-grid">
+          <article class="hist-card"><div class="hist-card-head"><span class="hist-index">01</span><h3 id="histBeforeTitle">Original · RGB channels</h3><span class="legend rgb-legend"><i></i><i></i><i></i></span></div><div class="chart-wrap"><canvas id="histBeforeRgb" class="hist-canvas" data-kind="rgb" aria-label="Input RGB histogram"></canvas><div class="chart-tooltip" hidden></div></div><div class="axis-label"><span>0</span><span data-i18n="intensityAxis">INTENSITY · 0–255</span><span>255</span></div><p class="hist-stat" id="statBeforeRgb">—</p></article>
+          <article class="hist-card"><div class="hist-card-head"><span class="hist-index">02</span><h3 id="histAfterTitle">Final · RGB channels</h3><span class="legend rgb-legend"><i></i><i></i><i></i></span></div><div class="chart-wrap"><canvas id="histAfterRgb" class="hist-canvas" data-kind="rgb" aria-label="Output RGB histogram"></canvas><div class="chart-tooltip" hidden></div></div><div class="axis-label"><span>0</span><span data-i18n="intensityAxis">INTENSITY · 0–255</span><span>255</span></div><p class="hist-stat" id="statAfterRgb">—</p></article>
+          <article class="hist-card"><div class="hist-card-head"><span class="hist-index">03</span><h3 id="histBeforeGrayTitle">Original · luminance</h3><span class="legend gray-legend"><i></i></span></div><div class="chart-wrap"><canvas id="histBeforeGray" class="hist-canvas" data-kind="gray" aria-label="Input luminance histogram"></canvas><div class="chart-tooltip" hidden></div></div><div class="axis-label"><span>0</span><span data-i18n="intensityAxis">INTENSITY · 0–255</span><span>255</span></div><p class="hist-stat" id="statBeforeGray">—</p></article>
+          <article class="hist-card"><div class="hist-card-head"><span class="hist-index">04</span><h3 id="histAfterGrayTitle">Final · luminance</h3><span class="legend gray-legend"><i></i></span></div><div class="chart-wrap"><canvas id="histAfterGray" class="hist-canvas" data-kind="gray" aria-label="Output luminance histogram"></canvas><div class="chart-tooltip" hidden></div></div><div class="axis-label"><span>0</span><span data-i18n="intensityAxis">INTENSITY · 0–255</span><span>255</span></div><p class="hist-stat" id="statAfterGray">—</p></article>
+        </div>
+        <p class="hist-footnote" data-i18n="histFootnote">Horizontal axis: intensity 0–255. Vertical axis: number of pixels (frequency). Transparent pixels are excluded. The RGB plot overlays red, green and blue counts; the luminance plot uses Y = 0.2126R + 0.7152G + 0.0722B.</p>
+      </section>
+
+      <section class="section theory" id="theory" aria-labelledby="theoryTitle">
+        <div class="section-heading"><div><p class="section-kicker" data-i18n="theoryKicker">THE METHOD</p><h2 id="theoryTitle" data-i18n="theoryTitle">What is happening to the pixels?</h2></div><p class="section-intro" data-i18n="theoryIntro">The same equations shown in the controls are used by the JavaScript for every pixel.</p></div>
+        <div class="theory-grid">
+          <article><span>01</span><h3 data-i18n="whyNormalize">Why normalize?</h3><p data-i18n="whyNormalizeText">Dividing by 255 maps each channel to [0, 1]. The equations then work on a common scale, independent of 8-bit storage.</p></article>
+          <article><span>02</span><h3 data-i18n="rgbVsGray">RGB versus grayscale</h3><p data-i18n="rgbVsGrayText">RGB transforms three independent channels. Grayscale first combines them into one luminance Y, then applies the same operations to that one value.</p></article>
+          <article><span>03</span><h3 data-i18n="effects">The three effects</h3><p data-i18n="effectsText">Brightness shifts values; contrast expands or compresses them about 0.5; gamma curves the midtones. The order matters.</p></article>
+          <article><span>04</span><h3 data-i18n="clipping">What is clipping?</h3><p data-i18n="clippingText">After each operation, values outside [0, 1] are limited to 0 or 1. Detail can be lost in shadows and highlights.</p></article>
+          <article><span>05</span><h3 data-i18n="histMeaning">Why does the histogram move?</h3><p data-i18n="histMeaningText">It counts how many pixel components have each intensity. Shifting, stretching or curving values changes those frequencies; clipping creates peaks at the ends.</p></article>
+          <article><span>06</span><h3 data-i18n="backToBytes">Back to 0–255</h3><p data-i18n="backToBytesText">Only after processing, each result g is converted with I = round(255 × g). That integer is written to the final PNG.</p></article>
+        </div>
+      </section>
+    </main>
+
+    <footer><div class="footer-brand">PIXEL<span>/</span>LAB <small>· 2026</small></div><p>Site developed by Alberto Junior, Frederico Roque and Lucas Alemão, with the help of AI.</p><a href="https://www.enautica.pt/" target="_blank" rel="noopener noreferrer">ENIDH <span aria-hidden="true">↗</span></a></footer>
+  </div>
+
+  <dialog id="infoDialog" class="info-dialog"><div class="dialog-head"><span class="section-kicker" data-i18n="aboutKicker">ABOUT THE PROJECT</span><button type="button" class="close-btn" data-close="infoDialog" aria-label="Close">×</button></div><h2 data-i18n="aboutTitle">An image processing laboratory</h2><p data-i18n="aboutBody">A project for the Image Processing course in Computer Engineering at ENIDH. Load a JPG or PNG, compare RGB and grayscale, apply intensity transformations on normalized values and inspect their effect on a pixel and on the image histogram.</p><div class="info-facts"><div><span data-i18n="technology">TECHNOLOGIES</span><strong>HTML · CSS · JavaScript · Canvas API</strong></div><div><span data-i18n="pipelineLabel">PROCESSING PIPELINE</span><strong>0–255 → 0–1 → β → α → γ → 0–255</strong></div></div><p class="privacy-note" data-i18n="privacy">Your image stays in this browser. No server or external library is required.</p></dialog>
+
+  <dialog id="compareDialog" class="compare-dialog"><div class="compare-head"><div><span class="section-kicker" data-i18n="compareKicker">FULL SCREEN COMPARISON</span><h2 data-i18n="compareTitle">Original / final</h2></div><button type="button" class="close-btn" data-close="compareDialog" aria-label="Close">×</button></div><div class="compare-grid"><div><span data-i18n="originalShort">ORIGINAL</span><div class="image-surface"><canvas id="compareOriginal" aria-label="Original image in full screen"></canvas></div></div><div><span data-i18n="finalShort">FINAL · ALL OPERATIONS</span><div class="image-surface"><canvas id="compareProcessed" aria-label="Processed image in full screen"></canvas></div></div></div><p data-i18n="compareHint">Both views follow the same coordinates. Close with Esc or the × button.</p></dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script>
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const sourceCanvas = $("originalCanvas");
+  const resultCanvas = $("processedCanvas");
+  const sourceContext = sourceCanvas.getContext("2d", {willReadFrequently:true});
+  const resultContext = resultCanvas.getContext("2d", {willReadFrequently:true});
+  const params = {brightness:0,contrast:1,gamma:1};
+  const defaults = {brightness:0,contrast:1,gamma:1};
+  const limits = {brightness:[-0.5,0.5,0.05],contrast:[0,3,0.1],gamma:[0.2,3,0.1]};
+  const stages = ["all","brightness","contrast","gamma"];
+  let mode = "rgb", stage = "all", lang = "en";
+  let width = 0, height = 0, sourceImage = null, processedImage = null;
+  let originalHistogram = null, stageHistograms = null, clipped = [0,0,0];
+  let pinned = null, hoverPoint = null, workScheduled = false, imageVersion = 0, toastTimer;
+  const dictionary = {
+    en: {
+      courseTag:"IMAGE PROCESSING · INTERACTIVE LAB",aboutBtn:"About",aboutTitle:"An image processing laboratory",
+      heroEyebrow:"AN INTERACTIVE IMAGE PROCESSING STUDIO",heroTitle:"See the math in<br><em>every pixel.</em>",
+      heroLead:"From RGB values to normalized light, then brightness, contrast and gamma. Change every parameter, inspect one pixel, and watch the image and its histograms respond.",
+      pipelineEffects:"OPERATIONS",dropTitle:"Drop an image here or choose a file",dropSub:"JPG / PNG · processed privately in your browser · original pixel resolution",choose:"Choose image",
+      sampleLoaded:"Sample image loaded · 960 × 600 px",restoreSample:"Restore sample image ↗",uploadAria:"Upload JPG or PNG image",
+      startLabel:"START HERE",conversionTitle:"One image, two representations.",conversionIntro:"RGB retains three colour channels. Grayscale calculates one luminance value from normalized R, G and B.",
+      rgbOriginal:"Original RGB",grayPreview:"Grayscale conversion",rgbExplainer:"Three channels, each stored as an integer from 0 to 255.",
+      grayExplainer:"After normalization, luminance is calculated as",normalizeLabel:"NORMALIZE FIRST",normalizeInfo:"Every operation below uses values in [0, 1]. Values return to 0–255 only for display/export.",
+      sourceAria:"Original RGB image",grayAria:"Grayscale preview",
+      workbenchKicker:"THE WORKBENCH",workbenchTitle:"Shape the light.",workbenchIntro:"Select a step to study it, or show all controls. The final image always applies the three operations in order.",
+      operationTabs:"Operation view",tabAll:"All operations",tabBrightness:"01 Brightness",tabContrast:"02 Contrast",tabGamma:"03 Gamma",modeAria:"Processing mode",modeLabel:"MODE",grayMode:"Grayscale",
+      brightnessTitle:"Brightness",brightnessDesc:"Adds the same amount to every normalized channel. Negative β darkens; positive β brightens.",
+      contrastTitle:"Contrast",contrastDesc:"Stretches or compresses intensities around the midpoint 0.5. α = 1 leaves them unchanged.",
+      gammaTitle:"Gamma",gammaDesc:"Curves midtones nonlinearly. γ < 1 makes them lighter; γ > 1 makes them darker.",
+      operationFormula:"OPERATION",betaLabel:"Brightness β",alphaLabel:"Contrast α",gammaLabel:"Gamma γ",
+      decBrightness:"Decrease brightness",incBrightness:"Increase brightness",decContrast:"Decrease contrast",incContrast:"Increase contrast",decGamma:"Decrease gamma",incGamma:"Increase gamma",
+      flowOrder:"RGB / grayscale → brightness → contrast → gamma → clipping → round(255 × g)",resetAll:"Reset all values ↺",
+      resultKicker:"FINAL OUTPUT",resultsTitle:"The complete transformation.",resultsIntro:"This output combines all settings, even when you are studying a single operation tab. Hover or click either image to trace a pixel.",
+      compare:"⛶ Compare full screen",download:"↓ Download final PNG",originalTitle:"Original · RGB 0–255",processedTitle:"Processed · final 0–255",
+      originalAria:"Original image, hover or click to inspect pixels",processedAria:"Processed image, hover or click to inspect pixels",
+      inspectorKicker:"PIXEL TRACE",inspectorTitle:"From source value to final value",hoverPrompt:"Hover or click an image",pinned:"Pixel pinned · click to move",hovering:"Inspecting pixel · click to pin",
+      traceOriginal:"ORIGINAL",traceNormalized:"NORMALIZED",traceProcessed:"PROCESSED",traceFinal:"FINAL",traceOriginalNote:"stored values [0, 255]",traceProcessedNote:"after β → α → γ and clipping",
+      grayTraceDefault:"In grayscale mode, the normalized RGB values become Y before processing.",grayTraceRGB:"RGB mode: the three normalized channels are processed independently.",
+      grayTraceY:"Grayscale input Y = ",clipPixel:"Clipped at this pixel: ",
+      histKicker:"DISTRIBUTION ANALYSIS",histTitle:"Read the histogram.",histIntro:"The selected tab compares its input and output. “All operations” compares the source image with the combined final image.",
+      analysisView:"ANALYSIS VIEW",clipMetric:"CLIPPED COMPONENTS IN THIS STEP",intensityAxis:"INTENSITY · 0–255",
+      histFootnote:"Horizontal axis: intensity 0–255. Vertical axis: number of pixels (frequency). Transparent pixels are excluded. The RGB plot overlays red, green and blue counts; the luminance plot uses Y = 0.2126R + 0.7152G + 0.0722B.",
+      scopeAll:"Original → combined result",scopeBrightness:"Step 01 · brightness",scopeContrast:"Step 02 · contrast",scopeGamma:"Step 03 · gamma",
+      noteAll:"The final distribution includes brightness, contrast and gamma in sequence.",noteBrightness:"Brightness moves normalized intensities by β before clipping.",noteContrast:"Contrast stretches or compresses around 0.5 before clipping.",noteGamma:"Gamma curves normalized intensities before clipping.",
+      beforeAll:"Original",afterAll:"Final",beforeBrightness:"Before brightness",afterBrightness:"After brightness",beforeContrast:"Before contrast",afterContrast:"After contrast",beforeGamma:"Before gamma",afterGamma:"After gamma",
+      rgbChannels:"RGB channels",luminance:"luminance",mean:"Mean luminance",pixels:"pixels",frequency:"pixels",
+      theoryKicker:"THE METHOD",theoryTitle:"What is happening to the pixels?",theoryIntro:"The same equations shown in the controls are used by the JavaScript for every pixel.",
+      whyNormalize:"Why normalize?",whyNormalizeText:"Dividing by 255 maps each channel to [0, 1]. The equations then work on a common scale, independent of 8-bit storage.",
+      rgbVsGray:"RGB versus grayscale",rgbVsGrayText:"RGB transforms three independent channels. Grayscale first combines them into one luminance Y, then applies the same operations to that one value.",
+      effects:"The three effects",effectsText:"Brightness shifts values; contrast expands or compresses them about 0.5; gamma curves the midtones. The order matters.",
+      clipping:"What is clipping?",clippingText:"After each operation, values outside [0, 1] are limited to 0 or 1. Detail can be lost in shadows and highlights.",
+      histMeaning:"Why does the histogram move?",histMeaningText:"It counts how many pixel components have each intensity. Shifting, stretching or curving values changes those frequencies; clipping creates peaks at the ends.",
+      backToBytes:"Back to 0–255",backToBytesText:"Only after processing, each result g is converted with I = round(255 × g). That integer is written to the final PNG.",
+      aboutKicker:"ABOUT THE PROJECT",aboutBody:"A project for the Image Processing course in Computer Engineering at ENIDH. Load a JPG or PNG, compare RGB and grayscale, apply intensity transformations on normalized values and inspect their effect on a pixel and on the image histogram.",
+      technology:"TECHNOLOGIES",pipelineLabel:"PROCESSING PIPELINE",privacy:"Your image stays in this browser. No server or external library is required.",
+      compareKicker:"FULL SCREEN COMPARISON",compareTitle:"Original / final",originalShort:"ORIGINAL",finalShort:"FINAL · ALL OPERATIONS",compareHint:"Both views follow the same coordinates. Close with Esc or the × button.",
+      invalidFile:"Please choose a valid JPG or PNG image.",readError:"This image could not be opened.",tooLarge:"This image is too large for this browser.",ready:"Final image is ready.",noImage:"Load an image first."
+    },
+    pt: {
+      courseTag:"PROCESSAMENTO DE IMAGEM · LABORATÓRIO INTERATIVO",aboutBtn:"Sobre",aboutTitle:"Um laboratório de processamento de imagem",
+      heroEyebrow:"UM LABORATÓRIO INTERATIVO DE PROCESSAMENTO",heroTitle:"Veja a matemática em<br><em>cada píxel.</em>",
+      heroLead:"Dos valores RGB à luz normalizada, depois brilho, contraste e gama. Ajuste os parâmetros, inspecione um píxel e observe a imagem e os histogramas a mudar.",
+      pipelineEffects:"OPERAÇÕES",dropTitle:"Arraste uma imagem para aqui ou escolha um ficheiro",dropSub:"JPG / PNG · processada localmente no navegador · resolução original dos píxeis",choose:"Escolher imagem",
+      sampleLoaded:"Imagem de exemplo carregada · 960 × 600 px",restoreSample:"Repor imagem de exemplo ↗",uploadAria:"Carregar imagem JPG ou PNG",
+      startLabel:"COMECE AQUI",conversionTitle:"Uma imagem, duas representações.",conversionIntro:"RGB preserva três canais de cor. Grayscale calcula uma luminância a partir de R, G e B normalizados.",
+      rgbOriginal:"RGB original",grayPreview:"Conversão grayscale",rgbExplainer:"Três canais, cada um guardado como inteiro entre 0 e 255.",
+      grayExplainer:"Após a normalização, calcula-se a luminância por",normalizeLabel:"NORMALIZAR PRIMEIRO",normalizeInfo:"Todas as operações abaixo usam valores em [0, 1]. Só no fim os valores regressam a 0–255 para visualização/exportação.",
+      sourceAria:"Imagem RGB original",grayAria:"Pré-visualização grayscale",
+      workbenchKicker:"ÁREA DE TRABALHO",workbenchTitle:"Molde a luz.",workbenchIntro:"Selecione uma etapa para a estudar ou mostre todos os controlos. A imagem final aplica sempre as três operações pela ordem indicada.",
+      operationTabs:"Vista das operações",tabAll:"Todas as operações",tabBrightness:"01 Brilho",tabContrast:"02 Contraste",tabGamma:"03 Gama",modeAria:"Modo de processamento",modeLabel:"MODO",grayMode:"Grayscale",
+      brightnessTitle:"Brilho",brightnessDesc:"Soma a mesma quantidade a cada canal normalizado. β negativo escurece; β positivo ilumina.",
+      contrastTitle:"Contraste",contrastDesc:"Expande ou comprime as intensidades em torno de 0,5. α = 1 não altera os valores.",
+      gammaTitle:"Gama",gammaDesc:"Altera os meios-tons de forma não linear. γ < 1 clareia; γ > 1 escurece.",
+      operationFormula:"OPERAÇÃO",betaLabel:"Brilho β",alphaLabel:"Contraste α",gammaLabel:"Gama γ",
+      decBrightness:"Diminuir brilho",incBrightness:"Aumentar brilho",decContrast:"Diminuir contraste",incContrast:"Aumentar contraste",decGamma:"Diminuir gama",incGamma:"Aumentar gama",
+      flowOrder:"RGB / grayscale → brilho → contraste → gama → clipping → round(255 × g)",resetAll:"Repor todos os valores ↺",
+      resultKicker:"RESULTADO FINAL",resultsTitle:"A transformação completa.",resultsIntro:"O resultado combina todos os ajustes, mesmo quando está a estudar uma só operação. Passe o rato ou clique numa imagem para seguir um píxel.",
+      compare:"⛶ Comparar em ecrã inteiro",download:"↓ Descarregar PNG final",originalTitle:"Original · RGB 0–255",processedTitle:"Processada · final 0–255",
+      originalAria:"Imagem original, passe o rato ou clique para inspecionar píxeis",processedAria:"Imagem processada, passe o rato ou clique para inspecionar píxeis",
+      inspectorKicker:"PERCURSO DO PÍXEL",inspectorTitle:"Do valor inicial ao valor final",hoverPrompt:"Passe o rato ou clique numa imagem",pinned:"Píxel fixado · clique para alterar",hovering:"A inspecionar · clique para fixar",
+      traceOriginal:"ORIGINAL",traceNormalized:"NORMALIZADO",traceProcessed:"PROCESSADO",traceFinal:"FINAL",traceOriginalNote:"valores guardados [0, 255]",traceProcessedNote:"após β → α → γ e clipping",
+      grayTraceDefault:"No modo grayscale, RGB normalizado transforma-se em Y antes do processamento.",grayTraceRGB:"Modo RGB: os três canais normalizados são processados separadamente.",
+      grayTraceY:"Entrada grayscale Y = ",clipPixel:"Clipping neste píxel: ",
+      histKicker:"ANÁLISE DA DISTRIBUIÇÃO",histTitle:"Leia o histograma.",histIntro:"O separador escolhido compara a sua entrada e saída. “Todas as operações” compara a original com o resultado final.",
+      analysisView:"VISTA DE ANÁLISE",clipMetric:"COMPONENTES LIMITADOS NESTA ETAPA",intensityAxis:"INTENSIDADE · 0–255",
+      histFootnote:"Eixo horizontal: intensidade 0–255. Eixo vertical: número de píxeis (frequência). Excluem-se píxeis transparentes. O gráfico RGB sobrepõe as contagens dos canais; o de luminância usa Y = 0.2126R + 0.7152G + 0.0722B.",
+      scopeAll:"Original → resultado combinado",scopeBrightness:"Etapa 01 · brilho",scopeContrast:"Etapa 02 · contraste",scopeGamma:"Etapa 03 · gama",
+      noteAll:"A distribuição final inclui brilho, contraste e gama em sequência.",noteBrightness:"O brilho desloca intensidades normalizadas por β antes do clipping.",noteContrast:"O contraste expande ou comprime em torno de 0,5 antes do clipping.",noteGamma:"A gama curva as intensidades normalizadas antes do clipping.",
+      beforeAll:"Original",afterAll:"Final",beforeBrightness:"Antes do brilho",afterBrightness:"Após o brilho",beforeContrast:"Antes do contraste",afterContrast:"Após o contraste",beforeGamma:"Antes da gama",afterGamma:"Após a gama",
+      rgbChannels:"canais RGB",luminance:"luminância",mean:"Luminância média",pixels:"píxeis",frequency:"píxeis",
+      theoryKicker:"O MÉTODO",theoryTitle:"O que acontece aos píxeis?",theoryIntro:"As equações mostradas nos controlos são as mesmas que o JavaScript aplica a cada píxel.",
+      whyNormalize:"Porquê normalizar?",whyNormalizeText:"Dividir por 255 coloca cada canal em [0, 1]. As fórmulas passam a usar uma escala comum, independente do armazenamento em 8 bits.",
+      rgbVsGray:"RGB versus grayscale",rgbVsGrayText:"RGB transforma três canais separados. Grayscale combina-os primeiro numa luminância Y e aplica as operações a esse valor único.",
+      effects:"Os três efeitos",effectsText:"Brilho desloca os valores; contraste expande ou comprime em torno de 0,5; gama curva os meios-tons. A ordem altera o resultado.",
+      clipping:"O que é clipping?",clippingText:"Após cada operação, valores fora de [0, 1] são limitados a 0 ou 1. Pode perder-se detalhe nas sombras e nos realces.",
+      histMeaning:"Porque muda o histograma?",histMeaningText:"Conta quantas componentes têm cada intensidade. Deslocar, esticar ou curvar valores altera as frequências; o clipping cria picos nos extremos.",
+      backToBytes:"Regresso a 0–255",backToBytesText:"Só após o processamento se calcula I = round(255 × g). Este inteiro é escrito no PNG final.",
+      aboutKicker:"SOBRE O PROJETO",aboutBody:"Projeto da unidade curricular de Processamento de Imagem em Engenharia Informática e de Computadores na ENIDH. Carregue JPG ou PNG, compare RGB e grayscale, aplique transformações sobre valores normalizados e inspecione o efeito num píxel e no histograma.",
+      technology:"TECNOLOGIAS",pipelineLabel:"FLUXO DE PROCESSAMENTO",privacy:"A imagem permanece neste navegador. Não são necessários servidor nem bibliotecas externas.",
+      compareKicker:"COMPARAÇÃO EM ECRÃ INTEIRO",compareTitle:"Original / final",originalShort:"ORIGINAL",finalShort:"FINAL · TODAS AS OPERAÇÕES",compareHint:"As duas vistas têm as mesmas coordenadas. Feche com Esc ou ×.",
+      invalidFile:"Escolha uma imagem JPG ou PNG válida.",readError:"Não foi possível abrir esta imagem.",tooLarge:"Esta imagem é demasiado grande para este navegador.",ready:"A imagem final está pronta.",noImage:"Carregue primeiro uma imagem."
+    }
+  };
+  function t(key){return dictionary[lang][key] || dictionary.en[key] || key;}
+  function setLanguage(next){
+    lang=next; document.documentElement.lang=next;
+    document.querySelectorAll("[data-i18n]").forEach(el=>{let value=t(el.dataset.i18n);if(el.dataset.i18n==="heroTitle")el.innerHTML=value;else el.textContent=value;});
+    document.querySelectorAll("[data-i18n-aria]").forEach(el=>el.setAttribute("aria-label",t(el.dataset.i18nAria)));
+    document.querySelectorAll(".lang-btn").forEach(el=>{let active=el.dataset.lang===next;el.classList.toggle("active",active);el.setAttribute("aria-pressed",String(active));});
+    document.title=next==="pt"?"Pixel Lab — Transformações de intensidade":"Pixel Lab — Intensity transformations";
+    updateFileLabel(); refreshAnalysis(); renderInspector();
+    $("themeBtn").setAttribute("aria-label",next==="pt"?"Alternar tema claro/escuro":"Switch light/dark theme");
+  }
+  document.querySelectorAll(".lang-btn").forEach(el=>el.addEventListener("click",()=>setLanguage(el.dataset.lang)));
+  $("themeBtn").addEventListener("click",()=>{
+    document.documentElement.dataset.theme=document.documentElement.dataset.theme==="dark"?"light":"dark";
+    refreshAnalysis();
+  });
+  function toast(message){
+    let el=$("toast");el.textContent=message;el.classList.add("show");
+    clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2200);
+  }
+  function blankHist(){return {r:new Uint32Array(256),g:new Uint32Array(256),b:new Uint32Array(256),y:new Uint32Array(256),count:0,sumY:0};}
+  function addHist(h,r,g,b){
+    h.r[r]++;h.g[g]++;h.b[b]++;
+    let y=Math.min(255,Math.max(0,Math.round(.2126*r+.7152*g+.0722*b)));
+    h.y[y]++;h.count++;h.sumY+=y;
+  }
+  function clamp(v){return v<0?0:v>1?1:v;}
+  function cap(v,idx){if(v<0||v>1)clipped[idx]++;return clamp(v);}
+  function formatVector(a,decimal){return "R "+a[0].toFixed(decimal)+" · G "+a[1].toFixed(decimal)+" · B "+a[2].toFixed(decimal);}
+  function setupCanvas(imageCanvas,label){
+    try {
+      width=imageCanvas.width;height=imageCanvas.height;
+      if(!width||!height||width*height>32000000){toast(t("tooLarge"));return;}
+      sourceCanvas.width=resultCanvas.width=width;
+      sourceCanvas.height=resultCanvas.height=height;
+      sourceContext.drawImage(imageCanvas,0,0);
+      sourceImage=sourceContext.getImageData(0,0,width,height);
+      imageVersion++;
+      window.pixelLab={sample:label==="sample",width:width,height:height};
+      $("originalDimensions").textContent=$("processedDimensions").textContent=width+" × "+height;
+      let displayWidth=Math.min(width,960),displayHeight=Math.max(1,Math.round(height*displayWidth/width));
+      let preview=$("sourcePreview"),gray=$("grayPreview");
+      preview.width=gray.width=displayWidth;preview.height=gray.height=displayHeight;
+      preview.getContext("2d").drawImage(imageCanvas,0,0,displayWidth,displayHeight);
+      let gc=gray.getContext("2d",{willReadFrequently:true});
+      gc.drawImage(preview,0,0);
+      let pixels=gc.getImageData(0,0,displayWidth,displayHeight),d=pixels.data;
+      for(let i=0;i<d.length;i+=4){let y=Math.round(255*(.2126*d[i]/255+.7152*d[i+1]/255+.0722*d[i+2]/255));d[i]=d[i+1]=d[i+2]=y;}
+      gc.putImageData(pixels,0,0);
+      originalHistogram=blankHist();
+      let original=sourceImage.data;
+      for(let i=0;i<original.length;i+=4)if(original[i+3]!==0)addHist(originalHistogram,original[i],original[i+1],original[i+2]);
+      window.pixelLab.label=label;
+      pinned=null;hoverPoint=null;updateFileLabel();resetInspector();scheduleProcess();
+    }catch(e){console.error(e);toast(t("tooLarge"));}
+  }
+  function updateFileLabel(){
+    if(!width)return;
+    $("fileMeta").textContent=window.pixelLab.label==="sample"?t("sampleLoaded"):window.pixelLab.label+" · "+width+" × "+height+" px";
+  }
+  function sampleImage(){
+    let canvas=document.createElement("canvas");canvas.width=960;canvas.height=600;
+    let c=canvas.getContext("2d");
+    let sky=c.createLinearGradient(0,0,960,600);
+    sky.addColorStop(0,"#0b2540");sky.addColorStop(.32,"#425d8f");sky.addColorStop(.66,"#e49b91");sky.addColorStop(1,"#f6c68e");c.fillStyle=sky;c.fillRect(0,0,960,600);
+    let glow=c.createRadialGradient(704,153,8,704,153,245);
+    glow.addColorStop(0,"#fff3ce");glow.addColorStop(.2,"#fbc693");glow.addColorStop(1,"rgba(255,191,157,0)");
+    c.fillStyle=glow;c.fillRect(420,0,540,450);
+    c.fillStyle="#ffdfa5";c.beginPath();c.arc(704,153,68,0,Math.PI*2);c.fill();
+    c.fillStyle="#394d78";c.beginPath();c.moveTo(0,345);c.lineTo(165,187);c.lineTo(328,340);c.lineTo(451,228);c.lineTo(620,389);c.lineTo(960,315);c.lineTo(960,600);c.lineTo(0,600);c.fill();
+    c.fillStyle="#233c5d";c.beginPath();c.moveTo(0,440);c.lineTo(225,338);c.lineTo(461,449);c.lineTo(702,299);c.lineTo(960,430);c.lineTo(960,600);c.lineTo(0,600);c.fill();
+    let water=c.createLinearGradient(0,375,0,600);water.addColorStop(0,"#799bc1");water.addColorStop(.55,"#236b85");water.addColorStop(1,"#073d59");c.fillStyle=water;c.fillRect(0,418,960,182);
+    c.fillStyle="rgba(255,227,177,.52)";for(let i=0;i<20;i++){let yy=428+i*8,ww=(i+2)*10;c.fillRect(704-ww/2,yy,ww,1.5)}
+    c.fillStyle="#102e3e";c.beginPath();c.moveTo(0,485);c.bezierCurveTo(170,442,212,552,385,535);c.lineTo(507,600);c.lineTo(0,600);c.fill();
+    c.fillStyle="#192b37";c.beginPath();c.moveTo(665,600);c.bezierCurveTo(752,511,807,555,960,482);c.lineTo(960,600);c.fill();
+    c.fillStyle="#e99771";c.beginPath();c.arc(171,448,46,0,Math.PI*2);c.fill();
+    c.fillStyle="#84d9bf";c.beginPath();c.arc(221,476,23,0,Math.PI*2);c.fill();
+    c.fillStyle="#ab9ef4";c.beginPath();c.arc(820,465,31,0,Math.PI*2);c.fill();
+    c.fillStyle="rgba(255,255,255,.58)";c.fillRect(33,35,94,9);c.fillStyle="rgba(16,45,69,.55)";c.fillRect(33,50,52,6);
+    setupCanvas(canvas,"sample");
+  }
+  function acceptFile(file){
+    if(!file)return;
+    if(!["image/jpeg","image/png"].includes(file.type)){toast(t("invalidFile"));return;}
+    let url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{URL.revokeObjectURL(url);let c=document.createElement("canvas");c.width=img.naturalWidth;c.height=img.naturalHeight;
+      if(!c.width||!c.height||c.width*c.height>32000000){toast(t("tooLarge"));return;}
+      c.getContext("2d").drawImage(img,0,0);setupCanvas(c,file.name);
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);toast(t("readError"));};
+    img.src=url;
+  }
+  const drop=$("dropZone"),input=$("fileInput");
+  $("chooseBtn").addEventListener("click",e=>{e.stopPropagation();input.click();});
+  drop.addEventListener("click",e=>{if(e.target!==$("chooseBtn"))input.click();});
+  drop.addEventListener("keydown",e=>{if(e.target===drop&&(e.key==="Enter"||e.key===" ")){e.preventDefault();input.click();}});
+  input.addEventListener("change",()=>{acceptFile(input.files[0]);input.value="";});
+  ["dragenter","dragover"].forEach(name=>drop.addEventListener(name,e=>{e.preventDefault();drop.classList.add("dragging");}));
+  ["dragleave","drop"].forEach(name=>drop.addEventListener(name,e=>{e.preventDefault();if(name==="dragleave"&&drop.contains(e.relatedTarget))return;drop.classList.remove("dragging");}));
+  drop.addEventListener("drop",e=>acceptFile(e.dataTransfer.files[0]));
+  window.addEventListener("dragover",e=>e.preventDefault());window.addEventListener("drop",e=>e.preventDefault());
+  $("sampleBtn").addEventListener("click",sampleImage);
+
+  function scheduleProcess(){
+    if(workScheduled)return;workScheduled=true;
+    requestAnimationFrame(()=>{workScheduled=false;processImage();});
+  }
+  function processImage(){
+    if(!sourceImage)return;
+    let version=imageVersion,raw=sourceImage.data,out=resultContext.createImageData(width,height),dest=out.data;
+    stageHistograms=[blankHist(),blankHist(),blankHist(),blankHist()];clipped=[0,0,0];
+    let beta=params.brightness,alpha=params.contrast,gamma=params.gamma;
+    for(let i=0;i<raw.length;i+=4){
+      let a=raw[i+3];dest[i+3]=a;if(a===0)continue;
+      let r0=raw[i]/255,g0=raw[i+1]/255,b0=raw[i+2]/255;
+      if(mode==="gray"){let y=.2126*r0+.7152*g0+.0722*b0;r0=y;g0=y;b0=y;}
+      addHist(stageHistograms[0],Math.round(255*r0),Math.round(255*g0),Math.round(255*b0));
+      let r1=cap(r0+beta,0),g1=cap(g0+beta,0),b1=cap(b0+beta,0);
+      addHist(stageHistograms[1],Math.round(255*r1),Math.round(255*g1),Math.round(255*b1));
+      let r2=cap(alpha*(r1-.5)+.5,1),g2=cap(alpha*(g1-.5)+.5,1),b2=cap(alpha*(b1-.5)+.5,1);
+      addHist(stageHistograms[2],Math.round(255*r2),Math.round(255*g2),Math.round(255*b2));
+      let r3=cap(Math.pow(r2,gamma),2),g3=cap(Math.pow(g2,gamma),2),b3=cap(Math.pow(b2,gamma),2);
+      let fr=Math.round(255*r3),fg=Math.round(255*g3),fb=Math.round(255*b3);
+      dest[i]=fr;dest[i+1]=fg;dest[i+2]=fb;
+      addHist(stageHistograms[3],fr,fg,fb);
+    }
+    if(version!==imageVersion)return;
+    processedImage=out;resultContext.putImageData(out,0,0);
+    $("modeBadge").textContent=mode==="rgb"?"RGB":"GRAYSCALE";
+    $("paramSummary").textContent="β "+signed(params.brightness)+" · α "+params.contrast.toFixed(2)+" · γ "+params.gamma.toFixed(2);
+    refreshAnalysis();renderInspector();
+    if($("compareDialog").open)drawComparison();
+  }
+  function signed(n){return(n>=0?"+":"")+n.toFixed(2);}
+  function setParam(name,value){
+    let bounds=limits[name];params[name]=Math.min(bounds[1],Math.max(bounds[0],Math.round(value*100)/100));
+    $(name+"Range").value=String(params[name]);
+    $(name+"Value").textContent=name==="brightness"?signed(params[name]):params[name].toFixed(2);
+    let percent=100*(params[name]-bounds[0])/(bounds[1]-bounds[0]);
+    $(name+"Range").style.background="linear-gradient(to right, var(--mint-strong) "+percent+"%, var(--line-strong) "+percent+"%)";
+    scheduleProcess();
+  }
+  ["brightness","contrast","gamma"].forEach(name=>{
+    $(name+"Range").addEventListener("input",e=>setParam(name,Number(e.target.value)));
+    setParam(name,defaults[name]);
+  });
+  document.querySelectorAll(".step-btn").forEach(btn=>btn.addEventListener("click",()=>{
+    let name=btn.dataset.param;setParam(name,params[name]+Number(btn.dataset.dir)*limits[name][2]);
+  }));
+  $("resetBtn").addEventListener("click",()=>{Object.keys(defaults).forEach(k=>setParam(k,defaults[k]));});
+  function selectStage(next){
+    stage=next;
+    document.querySelectorAll(".tab").forEach(el=>{let active=el.dataset.stage===next;el.classList.toggle("active",active);el.setAttribute("aria-selected",String(active));el.tabIndex=active?0:-1;});
+    $("controls").classList.toggle("focused",next!=="all");
+    document.querySelectorAll(".control-card").forEach(el=>el.hidden=next!=="all"&&el.dataset.control!==next);
+    refreshAnalysis();
+  }
+  document.querySelectorAll(".tab").forEach(el=>{
+    el.addEventListener("click",()=>selectStage(el.dataset.stage));
+    el.addEventListener("keydown",e=>{let delta=e.key==="ArrowRight"?1:e.key==="ArrowLeft"?-1:0;if(delta){e.preventDefault();let next=stages[(stages.indexOf(stage)+delta+stages.length)%stages.length];selectStage(next);document.querySelector('.tab[data-stage="'+next+'"]').focus();}});
+  });
+  document.querySelectorAll(".mode-btn").forEach(el=>el.addEventListener("click",()=>{
+    mode=el.dataset.mode;
+    document.querySelectorAll(".mode-btn").forEach(b=>{let active=b===el;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active));});
+    scheduleProcess();
+  }));
+
+  function drawHistogram(canvas,h,kind){
+    if(!h)return;
+    let rect=canvas.getBoundingClientRect();if(rect.width<20)return;
+    let dpr=Math.min(window.devicePixelRatio||1,2),w=Math.round(rect.width*dpr),ht=Math.round(rect.height*dpr);
+    if(canvas.width!==w||canvas.height!==ht){canvas.width=w;canvas.height=ht;}
+    let c=canvas.getContext("2d");c.clearRect(0,0,w,ht);c.scale(dpr,dpr);
+    let cw=rect.width,ch=rect.height,pad=8,graphH=ch-2*pad;
+    c.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--chart-grid").trim();c.lineWidth=1;
+    for(let i=0;i<=3;i++){let y=pad+i*graphH/3;c.beginPath();c.moveTo(0,y);c.lineTo(cw,y);c.stroke();}
+    let arrays=kind==="gray"?[h.y]:[h.r,h.g,h.b];
+    let max=1;arrays.forEach(a=>a.forEach(v=>{if(v>max)max=v;}));
+    let colors=kind==="gray"?["#a998ee"]:["#f06577","#45be89","#7297ed"];
+    arrays.forEach((arr,index)=>{
+      c.beginPath();for(let b=0;b<256;b++){let x=b/255*cw,y=ch-pad-arr[b]/max*graphH;if(!b)c.moveTo(x,y);else c.lineTo(x,y);}
+      c.strokeStyle=colors[index];c.lineWidth=kind==="gray"?1.8:1.25;c.globalAlpha=.82;c.stroke();c.globalAlpha=1;
+    });
+    c.setTransform(1,0,0,1,0,0);
+  }
+  const chartIds=["histBeforeRgb","histAfterRgb","histBeforeGray","histAfterGray"];
+  function refreshAnalysis(){
+    if(!stageHistograms||!originalHistogram)return;
+    let idx=stages.indexOf(stage),before=idx===0?originalHistogram:stageHistograms[idx-1],after=idx===0?stageHistograms[3]:stageHistograms[idx];
+    let beforeKey="before"+stage[0].toUpperCase()+stage.slice(1),afterKey="after"+stage[0].toUpperCase()+stage.slice(1);
+    $("histScopeTitle").textContent=t("scope"+stage[0].toUpperCase()+stage.slice(1));
+    $("histScopeNote").textContent=t("note"+stage[0].toUpperCase()+stage.slice(1));
+    $("histBeforeTitle").textContent=t(beforeKey)+" · "+t("rgbChannels");
+    $("histAfterTitle").textContent=t(afterKey)+" · "+t("rgbChannels");
+    $("histBeforeGrayTitle").textContent=t(beforeKey)+" · "+t("luminance");
+    $("histAfterGrayTitle").textContent=t(afterKey)+" · "+t("luminance");
+    let denom=(stage==="all"?3:1)*Math.max(1,after.count)*3;
+    let count=stage==="all"?clipped.reduce((a,b)=>a+b,0):clipped[idx-1];
+    $("clipMetricValue").textContent=(100*count/denom).toFixed(1)+"%";
+    let hs=[before,after,before,after];
+    chartIds.forEach((id,i)=>{
+      drawHistogram($(id),hs[i],i<2?"rgb":"gray");
+      let stat=$(i<2?(i===0?"statBeforeRgb":"statAfterRgb"):(i===2?"statBeforeGray":"statAfterGray"));
+      stat.textContent=t("mean")+": "+(hs[i].count?hs[i].sumY/hs[i].count:0).toFixed(1)+" / 255 · "+hs[i].count.toLocaleString(lang==="pt"?"pt-PT":"en-US")+" "+t("pixels");
+      $(id)._hist=hs[i];
+    });
+  }
+  chartIds.forEach(id=>{
+    let canvas=$(id),tip=canvas.nextElementSibling;
+    canvas.addEventListener("mousemove",e=>{
+      let h=canvas._hist;if(!h)return;let rect=canvas.getBoundingClientRect();
+      let x=Math.max(0,Math.min(255,Math.floor((e.clientX-rect.left)/rect.width*256)));
+      tip.textContent=canvas.dataset.kind==="gray"?"Y "+x+" · "+h.y[x].toLocaleString():x+" · R "+h.r[x]+"  G "+h.g[x]+"  B "+h.b[x];
+      tip.hidden=false;tip.style.left=Math.min(Math.max(0,e.clientX-rect.left+8),Math.max(0,rect.width-tip.offsetWidth-3))+"px";
+    });
+    canvas.addEventListener("mouseleave",()=>tip.hidden=true);
+  });
+  let resizeTimer;window.addEventListener("resize",()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{refreshAnalysis();if($("compareDialog").open)drawComparison();},100);});
+
+  function calculatePixel(x,y){
+    let i=(y*width+x)*4,d=sourceImage.data,original=[d[i],d[i+1],d[i+2]],normalized=original.map(v=>v/255);
+    let vals=normalized.slice(),clipCount=0,grayInput=null;
+    if(mode==="gray"){grayInput=.2126*vals[0]+.7152*vals[1]+.0722*vals[2];vals=[grayInput,grayInput,grayInput];}
+    const doClip=v=>{if(v<0||v>1)clipCount++;return clamp(v);};
+    vals=vals.map(v=>doClip(v+params.brightness));
+    vals=vals.map(v=>doClip(params.contrast*(v-.5)+.5));
+    vals=vals.map(v=>doClip(Math.pow(v,params.gamma)));
+    return {original,normalized,processed:vals,final:vals.map(v=>Math.round(255*v)),grayInput,clipCount};
+  }
+  function renderInspector(){
+    let point=pinned||hoverPoint;
+    if(!point||!sourceImage){resetInspector();return;}
+    let p=calculatePixel(point.x,point.y);
+    $("pixelCoord").textContent="x: "+point.x+" · y: "+point.y;
+    $("pinStatus").textContent=pinned?t("pinned"):t("hovering");
+    $("traceOriginal").textContent=formatVector(p.original,0);
+    $("traceNormalized").textContent=formatVector(p.normalized,4);
+    $("traceProcessed").textContent=mode==="gray"?"Y "+p.processed[0].toFixed(4):formatVector(p.processed,4);
+    $("traceFinal").textContent=mode==="gray"?"Y "+p.final[0]:formatVector(p.final,0);
+    $("grayTrace").textContent=mode==="gray"?t("grayTraceY")+p.grayInput.toFixed(4)+" = 0.2126R + 0.7152G + 0.0722B":t("grayTraceRGB");
+    $("clipTrace").textContent=p.clipCount?t("clipPixel")+p.clipCount:"";
+  }
+  function resetInspector(){
+    $("pixelCoord").textContent="x: — · y: —";$("pinStatus").textContent=t("hoverPrompt");
+    ["traceOriginal","traceNormalized","traceProcessed","traceFinal"].forEach(id=>$(id).textContent="R — · G — · B —");
+    $("grayTrace").textContent=t("grayTraceDefault");$("clipTrace").textContent="";
+  }
+  function pointFromEvent(canvas,e){
+    if(!sourceImage)return null;
+    let rect=canvas.getBoundingClientRect();
+    if(!rect.width||!rect.height)return null;
+    return {x:Math.min(width-1,Math.max(0,Math.floor((e.clientX-rect.left)*width/rect.width))),
+      y:Math.min(height-1,Math.max(0,Math.floor((e.clientY-rect.top)*height/rect.height)))};
+  }
+  [sourceCanvas,resultCanvas,$("compareOriginal"),$("compareProcessed")].forEach(canvas=>{
+    canvas.addEventListener("pointermove",e=>{if(!pinned){hoverPoint=pointFromEvent(canvas,e);renderInspector();}});
+    canvas.addEventListener("click",e=>{pinned=pointFromEvent(canvas,e);renderInspector();});
+  });
+  $("downloadBtn").addEventListener("click",()=>{
+    if(!processedImage){toast(t("noImage"));return;}
+    resultCanvas.toBlob(blob=>{
+      if(!blob){toast(t("readError"));return;}
+      let url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="pixel-lab-"+mode+"-processed.png";
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+    },"image/png");
+  });
+  function drawComparison(){
+    let pairs=[[sourceCanvas,$("compareOriginal")],[resultCanvas,$("compareProcessed")]];
+    pairs.forEach(pair=>{let from=pair[0],to=pair[1],scale=Math.min(1,1500/from.width);
+      to.width=Math.max(1,Math.round(from.width*scale));to.height=Math.max(1,Math.round(from.height*scale));
+      to.getContext("2d").drawImage(from,0,0,to.width,to.height);
+    });
+  }
+  $("compareBtn").addEventListener("click",()=>{
+    if(!sourceImage){toast(t("noImage"));return;}
+    let dialog=$("compareDialog");drawComparison();dialog.showModal();
+    if(dialog.requestFullscreen)dialog.requestFullscreen().catch(()=>{});
+  });
+  $("infoBtn").addEventListener("click",()=>$("infoDialog").showModal());
+  document.querySelectorAll("[data-close]").forEach(el=>el.addEventListener("click",()=>{
+    let dialog=$(el.dataset.close);
+    if(document.fullscreenElement===dialog)document.exitFullscreen().catch(()=>{});
+    dialog.close();
+  }));
+  document.querySelectorAll("dialog").forEach(dialog=>{
+    dialog.addEventListener("click",e=>{if(e.target===dialog&&dialog.id==="infoDialog")dialog.close();});
+    dialog.addEventListener("close",()=>{if(document.fullscreenElement===dialog)document.exitFullscreen().catch(()=>{});});
+  });
+  setLanguage("en");sampleImage();
+})();
+
+  </script>
+</body>
+</html>
